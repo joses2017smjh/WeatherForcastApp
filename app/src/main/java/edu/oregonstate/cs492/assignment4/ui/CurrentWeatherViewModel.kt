@@ -1,19 +1,39 @@
 package edu.oregonstate.cs492.assignment4.ui
 
+import android.app.Application
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import edu.oregonstate.cs492.assignment4.data.AppDatabase
 import edu.oregonstate.cs492.assignment4.data.CurrentWeatherRepository
+import edu.oregonstate.cs492.assignment4.data.FiveDayForecastRepository
+import edu.oregonstate.cs492.assignment4.data.ForecastLocation
 import edu.oregonstate.cs492.assignment4.data.ForecastPeriod
 import edu.oregonstate.cs492.assignment4.data.OpenWeatherService
+
+
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 
 /**
  * This is a ViewModel class that holds current weather data for the UI.
  */
-class CurrentWeatherViewModel: ViewModel() {
-    private val repository = CurrentWeatherRepository(OpenWeatherService.create())
+class CurrentWeatherViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository: CurrentWeatherRepository
+
+    init {
+        // Use getApplication() to get the application context
+        val forecastLocationDao = AppDatabase.getDatabase(getApplication()).forecastLocationDao()
+        repository = CurrentWeatherRepository(
+            OpenWeatherService.create(),
+            forecastLocationDao
+        )
+    }
 
     /*
      * The most recent response from the OpenWeather current weather API are stored in this
@@ -40,12 +60,14 @@ class CurrentWeatherViewModel: ViewModel() {
      * one.  If there was no error associated with the most recent API query, it will be null.
      */
     val error: LiveData<Throwable?> = _error
+    val savedLocations: LiveData<List<ForecastLocation>> = repository.getSavedLocations()
 
     /*
      * The current loading state is stored in this private property.  This loading state is exposed
      * to the outside world in immutable form via the public `loading` property below.
      */
     private val _loading = MutableLiveData<Boolean>(false)
+
 
     /**
      * This property indicates the current loading state of an API query.  It is `true` if an
@@ -65,17 +87,23 @@ class CurrentWeatherViewModel: ViewModel() {
      *   Can be one of: "standard", "metric", and "imperial".
      * @param apiKey Should be a valid OpenWeather API key.
      */
+
     fun loadCurrentWeather(location: String?, units: String?, apiKey: String) {
-        /*
-         * Launch a new coroutine in which to execute the API call.  The coroutine is tied to the
-         * lifecycle of this ViewModel by using `viewModelScope`.
-         */
+        _loading.value = true
         viewModelScope.launch {
-            _loading.value = true
             val result = repository.loadCurrentWeather(location, units, apiKey)
             _loading.value = false
-            _error.value = result.exceptionOrNull()
-            _weather.value = result.getOrNull()
+            if (result.isSuccess) {
+                _weather.value = result.getOrNull()
+                location?.let {
+                    repository.saveLocation(it) // Save the location after fetching forecast
+                }
+            }  else {
+                _error.value = result.exceptionOrNull()
+            }
         }
     }
+
 }
+
+

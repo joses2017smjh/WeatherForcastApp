@@ -1,5 +1,6 @@
 package edu.oregonstate.cs492.assignment4.data
 
+import androidx.lifecycle.LiveData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,6 +12,7 @@ import kotlin.time.TimeSource
  */
 class FiveDayForecastRepository (
     private val service: OpenWeatherService,
+    private val forecastLocationDao: ForecastLocationDao,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     /*
@@ -67,6 +69,7 @@ class FiveDayForecastRepository (
                         timeStamp = timeSource.markNow()
                         currentLocation = location
                         currentUnits = units
+                        location?.let { saveLocation(it) } // Ensure location is not null
                         Result.success(cachedForecast)
                     } else {
                         Result.failure(Exception(response.errorBody()?.string()))
@@ -99,4 +102,17 @@ class FiveDayForecastRepository (
         || location != currentLocation
         || units != currentUnits
         || (timeStamp + cacheMaxAge).hasPassedNow()
+
+    suspend fun saveLocation(location: String) {
+        val timestamp = System.currentTimeMillis()
+        val forecastLocation = ForecastLocation(cityName = location, lastViewedTimestamp = timestamp)
+        forecastLocationDao.insertLocation(forecastLocation)
+    }
+
+    fun getSavedLocations(): LiveData<List<ForecastLocation>> {
+        return forecastLocationDao.getAllLocations()
+    }
+    suspend fun updateLocationTimestamp(cityName: String, timestamp: Long) {
+        forecastLocationDao.updateTimestamp(cityName, timestamp)
+    }
 }

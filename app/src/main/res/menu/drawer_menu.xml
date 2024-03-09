@@ -1,0 +1,23 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_current_weather"
+        android:title="Currennt Weather"
+        android:icon="@drawable/ic_outline_cloud_24"/>
+
+
+    <item
+        android:id="@+id/nav_five_day_forecast"
+        android:title="Five-Day Forecast"
+        android:icon="@drawable/ic_action_five_day_forecast"/>
+    <item
+        android:id="@+id/nav_settings"
+        android:title="Settings"
+        android:icon="@drawable/ic_action_settings"/>
+    <!-- Placeholder for dynamically added cities -->
+    <item
+        android:id="@+id/saved_cities"
+        android:title="Saved Cities">
+        <menu></menu> <!-- Submenu for dynamically adding cities -->
+    </item>
+</menu>

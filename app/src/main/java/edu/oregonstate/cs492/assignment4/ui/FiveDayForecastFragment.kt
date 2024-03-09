@@ -2,15 +2,19 @@ package edu.oregonstate.cs492.assignment4.ui
 
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
 import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import edu.oregonstate.cs492.assignment4.R
+import edu.oregonstate.cs492.assignment4.data.ForecastLocation
 
 /**
  * This fragment represents the "five-day forecast" screen.
@@ -26,6 +30,14 @@ class FiveDayForecastFragment: Fragment(R.layout.fragment_five_day_forecast) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+        val city = prefs.getString(getString(R.string.pref_city_key), "Corvallis,OR,US")
+        val units = prefs.getString(
+            getString(R.string.pref_units_key),
+            getString(R.string.pref_units_default_value)
+        )
+        viewModel.loadFiveDayForecast(city, units, getString(R.string.openweather_api_key))
 
         cityTV = view.findViewById(R.id.tv_city)
         loadingErrorTV = view.findViewById(R.id.tv_loading_error)
@@ -77,6 +89,14 @@ class FiveDayForecastFragment: Fragment(R.layout.fragment_five_day_forecast) {
                 loadingIndicator.visibility = View.INVISIBLE
             }
         }
+        val sharedViewModel = ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
+
+        viewModel.savedLocations.observe(viewLifecycleOwner, { locations ->
+            sharedViewModel.updateSavedLocations(locations)
+        })
+
+
+
     }
 
     override fun onResume() {
@@ -98,5 +118,27 @@ class FiveDayForecastFragment: Fragment(R.layout.fragment_five_day_forecast) {
         )
         viewModel.loadFiveDayForecast(city, units, getString(R.string.openweather_api_key))
         cityTV.text = city
+    }
+
+
+
+    private fun updateNavigationDrawer(locations: List<ForecastLocation>) {
+
+        val navigationView: NavigationView = requireActivity().findViewById(R.id.nav_view)
+        val menu = navigationView.menu
+
+        menu.clear()
+
+
+        locations.forEach { location ->
+            menu.add(Menu.NONE, Menu.NONE, Menu.NONE, location.cityName)
+                .setOnMenuItemClickListener {
+
+                    true
+                }
+        }
+
+
+        navigationView.invalidate()
     }
 }

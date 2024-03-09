@@ -1,19 +1,45 @@
 package edu.oregonstate.cs492.assignment4.ui
 
+import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
+import android.provider.Settings.Global.getString
+import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
+import edu.oregonstate.cs492.assignment4.R
+import edu.oregonstate.cs492.assignment4.data.AppDatabase
+import edu.oregonstate.cs492.assignment4.data.CurrentWeatherRepository
 import edu.oregonstate.cs492.assignment4.data.FiveDayForecast
 import edu.oregonstate.cs492.assignment4.data.FiveDayForecastRepository
+import edu.oregonstate.cs492.assignment4.data.ForecastLocation
 import edu.oregonstate.cs492.assignment4.data.OpenWeatherService
+import kotlinx.coroutines.Dispatchers
+
 import kotlinx.coroutines.launch
+
 
 /**
  * This is a ViewModel class that holds 5-day/3-hour forecast data for the UI.
  */
-class FiveDayForecastViewModel: ViewModel() {
-    private val repository = FiveDayForecastRepository(OpenWeatherService.create())
+class FiveDayForecastViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository: FiveDayForecastRepository
+    private lateinit var prefs: SharedPreferences
+
+    init {
+        // Use getApplication() to get the application context
+        val forecastLocationDao = AppDatabase.getDatabase(getApplication()).forecastLocationDao()
+        repository = FiveDayForecastRepository(
+            OpenWeatherService.create(),
+            forecastLocationDao
+        )
+    }
+
+
 
     /*
      * The most recent response from the OpenWeather 5-day/3-hour forecast API are stored in this
@@ -40,7 +66,7 @@ class FiveDayForecastViewModel: ViewModel() {
      * one.  If there was no error associated with the most recent API query, it will be null.
      */
     val error: LiveData<Throwable?> = _error
-
+    val savedLocations: LiveData<List<ForecastLocation>> = repository.getSavedLocations()
     /*
      * The current loading state is stored in this private property.  This loading state is exposed
      * to the outside world in immutable form via the public `loading` property below.
@@ -65,17 +91,41 @@ class FiveDayForecastViewModel: ViewModel() {
      *   Can be one of: "standard", "metric", and "imperial".
      * @param apiKey Should be a valid OpenWeather API key.
      */
-    fun loadFiveDayForecast(location: String?, units: String?, apiKey: String) {
-        /*
-         * Launch a new coroutine in which to execute the API call.  The coroutine is tied to the
-         * lifecycle of this ViewModel by using `viewModelScope`.
-         */
+
+    fun onCitySelected(cityName: String, context: Context) {
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val units = prefs.getString(context.getString(R.string.pref_units_key), context.getString(R.string.pref_units_default_value))
+        val apiKey = context.getString(R.string.openweather_api_key) // Assuming your API key is stored in string resources
+
         viewModelScope.launch {
-            _loading.value = true
-            val result = repository.loadFiveDayForecast(location, units, apiKey)
-            _loading.value = false
-            _error.value = result.exceptionOrNull()
-            _forecast.value = result.getOrNull()
+            repository.updateLocationTimestamp(cityName, System.currentTimeMillis())
+            // Adjust the call according to your method's signature
+            // This example assumes your loadFiveDayForecast method is adjusted to work with these parameters
+            loadFiveDayForecast(cityName, units ?: "metric", apiKey)
         }
     }
+
+    fun loadFiveDayForecast(location: String?, units: String?, apiKey: String) {
+        _loading.value = true
+        viewModelScope.launch {
+            try {
+                val result = repository.loadFiveDayForecast(location, units, apiKey)
+                if (result.isSuccess) {
+                    _forecast.value = result.getOrNull()
+                    location?.let {
+                        repository.saveLocation(it) // Save the location after fetching forecast
+                    }
+                } else {
+                    _error.value = result.exceptionOrNull()
+                }
+            } catch (e: Exception) {
+                _error.value = e
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+
 }

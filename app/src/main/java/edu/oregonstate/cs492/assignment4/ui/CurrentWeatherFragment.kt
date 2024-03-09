@@ -16,11 +16,14 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.preference.PreferenceManager
 import com.bumptech.glide.Glide
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import edu.oregonstate.cs492.assignment4.R
+import edu.oregonstate.cs492.assignment4.data.ForecastLocation
 import edu.oregonstate.cs492.assignment4.data.ForecastPeriod
 import edu.oregonstate.cs492.assignment4.util.openWeatherEpochToDate
 
@@ -49,6 +52,8 @@ class CurrentWeatherFragment : Fragment(R.layout.fragment_current_weather) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+
 
         weatherInfoView = view.findViewById(R.id.weather_info)
         loadingErrorTV = view.findViewById(R.id.tv_loading_error)
@@ -135,6 +140,13 @@ class CurrentWeatherFragment : Fragment(R.layout.fragment_current_weather) {
             viewLifecycleOwner,
             Lifecycle.State.STARTED
         )
+
+        val sharedViewModel = ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
+
+        viewModel.savedLocations.observe(viewLifecycleOwner, { locations ->
+            sharedViewModel.updateSavedLocations(locations)
+        })
+
     }
 
     override fun onResume() {
@@ -225,5 +237,27 @@ class CurrentWeatherFragment : Fragment(R.layout.fragment_current_weather) {
             type = "text/plain"
         }
         startActivity(Intent.createChooser(intent, null))
+    }
+
+
+    private fun updateNavigationDrawer(locations: List<ForecastLocation>) {
+        // Assuming you have access to your NavigationView here
+        val navigationView: NavigationView = requireActivity().findViewById(R.id.nav_view)
+        val menu = navigationView.menu
+        // Clear existing dynamic items or find the specific menu item that holds city items
+        menu.clear() // Or menu.findItem(R.id.your_menu_item_for_cities)?.subMenu?.clear()
+
+        // Add dynamic items
+        locations.forEach { location ->
+            menu.add(Menu.NONE, Menu.NONE, Menu.NONE, location.cityName)
+                .setOnMenuItemClickListener {
+                    // Handle city selection
+                    // For example, fetch forecast for the selected city
+                    true
+                }
+        }
+
+        // Optional: Refresh the NavigationView to show the updated items
+        navigationView.invalidate()
     }
 }

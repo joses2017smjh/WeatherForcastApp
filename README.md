@@ -28,7 +28,7 @@ Once you have your app hooked up to save cities in the database, use [Android St
 
 ## 3. Add a navigation drawer to the app
 
-Next, use [the `NavigationUI`](https://developer.android.com/guide/navigation/navigation-ui) to provide [a navigation drawer](https://developer.android.com/guide/navigation/navigation-ui#add_a_navigation_drawer) the user can use to navigate between destinations in your app.  The navigation drawer should be accessable from all of the app's screens.  Initially, the navigation drawer only needs to contain working links to the "current weather" screen, the "five-day forecast" screen, and the settings screen.
+Next, use [the `NavigationUI`](https://developer.android.com/guide/navigation/navigation-ui) to provide [a navigation drawer](https://developer.android.com/guide/navigation/navigation-ui#add_a_navigation_drawer) the user can use to navigate between destinations in your app.  Initially, the navigation drawer only needs to contain working links to the "current weather" screen, the "five-day forecast" screen, and the settings screen.
 
 ## 4. Add a list of saved cities to the navigation drawer
 
@@ -85,7 +85,6 @@ The base assignment is worth 100 total points, broken down as follows:
   * 20 points: New cities entered in the settings screen are successfully added into the database.
 
   * 15 points: The app has a navigation drawer that can be used to navigate to all of the app's screens.
-    * The navigation drawer must be accessible from all of the app's screens.
 
   * 15 points: The navigation drawer contains a list of all cities stored in the app's database.
 
